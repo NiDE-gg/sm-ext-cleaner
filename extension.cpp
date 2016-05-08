@@ -34,12 +34,6 @@
 #include "CDetour/detours.h"
 #include "extension.h"
 
-/* SourceMod CDetour doesn't have this */
-#define DETOUR_DECL_STATIC2(name, ret, p1type, p1name, p2type, p2name) \
-ret (*name##_Actual)(p1type, p2type) = NULL; \
-ret name(p1type p1name, p2type p2name)
-/* */
-
 #if SOURCE_ENGINE > SE_LEFT4DEAD2
 #define WINDOWS_SIGNATURE "\x55\x8B\xEC\x83\xE4\xF8\x83\xEC\x14\x8B\x45\x08\x53\x56\x57\x8B\xF9"
 #define WINDOWS_SIG_LENGTH 17
@@ -56,10 +50,9 @@ ret name(p1type p1name, p2type p2name)
 Cleaner g_Cleaner;
 SMEXT_LINK(&g_Cleaner);
 
-CDetour *g_pDetour = 0;
-CDetour *g_pPrintf = 0;
+CDetour *g_pDetour = NULL;
 
-char **g_ppStrings;
+char **g_ppStrings = NULL;
 int g_Strings = 0;
 
 #if SOURCE_ENGINE >= SE_LEFT4DEAD2
@@ -86,6 +79,10 @@ DETOUR_DECL_STATIC2(Detour_DefSpew, SpewRetval_t, SpewType_t, channel, char *, t
 
 bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 {
+	g_pDetour = NULL;
+	g_ppStrings = NULL;
+	g_Strings = 0;
+
 	CDetourManager::Init(g_pSM->GetScriptingEngine(), 0);
 
 	char szPath[256];
@@ -108,7 +105,9 @@ bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 
 	rewind(pFile);
 
-	g_ppStrings = (char**)malloc(Lines * sizeof(char**));
+	g_ppStrings = (char **)malloc(Lines * sizeof(char **));
+	memset(g_ppStrings, 0, Lines * sizeof(char **));
+
 	while(!feof(pFile))
 	{
 		g_ppStrings[g_Strings] = (char *)malloc(256 * sizeof(char *));
@@ -116,14 +115,29 @@ bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 
 		int Len = strlen(g_ppStrings[g_Strings]);
 		if(g_ppStrings[g_Strings][Len - 1] == '\r' || g_ppStrings[g_Strings][Len - 1] == '\n')
-				g_ppStrings[g_Strings][Len - 1] = 0;
+			g_ppStrings[g_Strings][Len - 1] = 0;
 
 		if(g_ppStrings[g_Strings][Len - 2] == '\r')
-				g_ppStrings[g_Strings][Len - 2] = 0;
+			g_ppStrings[g_Strings][Len - 2] = 0;
 
-		g_Strings++;
+		Len = strlen(g_ppStrings[g_Strings]);
+		if(!Len)
+		{
+			free(g_ppStrings[g_Strings]);
+			g_ppStrings[g_Strings] = NULL;
+		}
+		else
+			g_Strings++;
 	}
 	fclose(pFile);
+
+	if(!g_Strings)
+	{
+		SDK_OnUnload();
+
+		snprintf(error, maxlength, "Config is empty, disabling extension.");
+		return false;
+	}
 
 #if SOURCE_ENGINE >= SE_LEFT4DEAD2
 #ifdef PLATFORM_WINDOWS
@@ -132,9 +146,11 @@ bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 #elif defined PLATFORM_LINUX
 	void *pTier0 = dlopen("libtier0.so", RTLD_NOW);
 	void *pFn = memutils->ResolveSymbol(pTier0, LINUX_SIGNATURE);
+	dlclose(pTier0);
 #elif defined PLATFORM_APPLE
 	void *pTier0 = dlopen("libtier0.dylib", RTLD_NOW);
 	void *pFn = memutils->ResolveSymbol(pTier0, MAC_SIGNATURE);
+	dlclose(pTier0);
 #endif
 	if(!pFn)
 	{
@@ -144,7 +160,7 @@ bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 #endif
 
 #if SOURCE_ENGINE >= SE_LEFT4DEAD2
-	g_pDetour = DETOUR_CREATE_MEMBER(Detour_LogDirect, fn);
+	g_pDetour = DETOUR_CREATE_MEMBER(Detour_LogDirect, pFn);
 #else
 	g_pDetour = DETOUR_CREATE_STATIC(Detour_DefSpew, (void *)GetSpewOutputFunc());
 #endif
@@ -162,8 +178,20 @@ bool Cleaner::SDK_OnLoad(char *error, size_t maxlength, bool late)
 
 void Cleaner::SDK_OnUnload()
 {
-	if(g_pDetour)
+	if(g_pDetour != NULL)
+	{
 		g_pDetour->Destroy();
+		g_pDetour = NULL;
+	}
 
-	delete[] g_ppStrings;
+	if(g_ppStrings != NULL)
+	{
+		for(int i = 0; i < g_Strings; i++)
+		{
+			free(g_ppStrings[i]);
+			g_ppStrings[i] = NULL;
+		}
+		free(g_ppStrings);
+		g_ppStrings = NULL;
+	}
 }

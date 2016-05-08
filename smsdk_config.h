@@ -40,9 +40,9 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"Cleaner"
 #define SMEXT_CONF_DESCRIPTION	"Filter useless output from console"
-#define SMEXT_CONF_VERSION		"1.0"
-#define SMEXT_CONF_AUTHOR		"Zephyrus"
-#define SMEXT_CONF_URL			"http://www.sourcemod.net/"
+#define SMEXT_CONF_VERSION		"1.1"
+#define SMEXT_CONF_AUTHOR		"Zephyrus + BotoX"
+#define SMEXT_CONF_URL			"https://github.com/CSSZombieEscape/sm-ext-cleaner"
 #define SMEXT_CONF_LOGTAG		"CLEANER"
 #define SMEXT_CONF_LICENSE		"GPL"
 #define SMEXT_CONF_DATESTRING	__DATE__
