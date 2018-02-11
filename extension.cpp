@@ -37,8 +37,8 @@
 #if SOURCE_ENGINE > SE_LEFT4DEAD2
 #define WINDOWS_SIGNATURE "\x55\x8B\xEC\x83\xE4\xF8\x83\xEC\x14\x8B\x45\x08\x53\x56\x57\x8B\xF9"
 #define WINDOWS_SIG_LENGTH 17
-#define LINUX_SIGNATURE "_ZL12_SpewMessage10SpewType_tPKciPK5ColorS1_Pc"
-#define MAC_SIGNATURE "_ZL12_SpewMessage10SpewType_tPKciPK5ColorS1_Pc"
+#define LINUX_SIGNATURE "_ZN14CLoggingSystem9LogDirectEi17LoggingSeverity_t5ColorPKc"
+#define MAC_SIGNATURE "_ZN14CLoggingSystem9LogDirectEi17LoggingSeverity_t5ColorPKc"
 
 #elif SOURCE_ENGINE == SE_LEFT4DEAD2
 #define WINDOWS_SIGNATURE "\x55\x8B\xEC\x83\xEC\x08\xE8\x2A\x2A\x2A\x2A\x8B\x48\x08\x89\x0D"
